@@ -1,0 +1,17 @@
+{
+  "name": "discord-recovery-web",
+  "version": "1.0.0",
+  "description": "Discord Recovery Bot - Verification Web Server",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "uuid": "^11.0.5",
+    "cors": "^2.8.5"
+  }
+}
