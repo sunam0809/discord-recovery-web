@@ -1,1 +1,13 @@
-{"verifiedUsers":{},"guildSettings":{},"recoveryKeys":{}}
+{
+  "verifiedUsers": {},
+  "guildSettings": {
+    "1500417995795857508": {
+      "roleId": "1500524257707561000",
+      "roleName": "유저",
+      "webhookUrl": "https://discord.com/api/webhooks/1506283570426282004/Gg959Gts-7_-93HTjqDzsgbM89a8vglfD5BnoU0IydTLAao90wzAIs9piUZBGTDixuwY",
+      "channelId": "1501631265668071444",
+      "guildName": "CM CHEAT"
+    }
+  },
+  "recoveryKeys": {}
+}
