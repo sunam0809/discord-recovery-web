@@ -17,97 +17,106 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // ─── GitHub-backed Persistent Database ───────────────────────────────────────
 const GH_TOKEN = process.env.GITHUB_TOKEN;
-const GH_USER  = process.env.GH_USER || 'sunam0809';
-const GH_REPO  = process.env.GH_REPO || 'discord-recovery-web';
+const GH_USER  = process.env.GH_USER  || 'sunam0809';
+const GH_REPO  = process.env.GH_REPO  || 'discord-recovery-web';
 const GH_FILE  = 'data/db.json';
+const GH_HEADERS = {
+  Authorization: `token ${GH_TOKEN}`,
+  Accept: 'application/vnd.github.v3+json',
+  'Content-Type': 'application/json',
+};
 
-let _cache = null;
-let _sha   = null;
-let _dirty = false;
-let _saveTimer = null;
-
-async function loadDB() {
-  if (_cache) return _cache;
-  try {
-    const res = await axios.get(
-      `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,
-      { headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' } }
-    );
-    _sha = res.data.sha;
-    _cache = JSON.parse(Buffer.from(res.data.content, 'base64').toString('utf8'));
-  } catch (e) {
-    console.error('DB 로드 실패, 빈 DB 사용:', e.message);
-    _cache = { verifiedUsers: {}, guildSettings: {}, recoveryKeys: {} };
-  }
-  return _cache;
+// 읽기: GitHub에서 최신 데이터 + SHA 동시에 가져옴
+async function ghRead() {
+  const res = await axios.get(
+    `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,
+    { headers: GH_HEADERS }
+  );
+  const data = JSON.parse(Buffer.from(res.data.content, 'base64').toString('utf8'));
+  return { data, sha: res.data.sha };
 }
 
-async function saveDB() {
-  if (!_cache) return;
+// 쓰기: 반드시 최신 SHA로 PUT (충돌 방지)
+async function ghWrite(data) {
+  // 저장 직전에 최신 SHA를 가져옴 (SHA 없으면 GitHub 거절)
+  let sha;
   try {
-    const content = Buffer.from(JSON.stringify(_cache, null, 2)).toString('base64');
-    const body = {
-      message: `db: update ${new Date().toISOString()}`,
-      content,
-    };
-    if (_sha) body.sha = _sha;
-    const res = await axios.put(
+    const cur = await axios.get(
       `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,
-      body,
-      { headers: { Authorization: `token ${GH_TOKEN}`, 'Content-Type': 'application/json' } }
+      { headers: GH_HEADERS }
     );
-    _sha = res.data.content.sha;
-    _dirty = false;
-    console.log('DB 저장 완료');
+    sha = cur.data.sha;
   } catch (e) {
-    console.error('DB 저장 실패:', e.response?.data || e.message);
+    sha = null; // 파일이 없을 경우 (첫 생성)
   }
+
+  const body = {
+    message: `db: ${new Date().toISOString()}`,
+    content: Buffer.from(JSON.stringify(data, null, 2)).toString('base64'),
+  };
+  if (sha) body.sha = sha;
+
+  await axios.put(
+    `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,
+    body,
+    { headers: GH_HEADERS }
+  );
+  console.log('DB 저장 완료 ✅');
 }
 
-function scheduleSave() {
-  _dirty = true;
-  if (_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => saveDB(), 2000); // 2초 후 저장 (묶어서 처리)
+// 읽고 → 수정하고 → 저장 (원자적 처리)
+async function withDB(fn) {
+  try {
+    const { data } = await ghRead();
+    const result = await fn(data);
+    await ghWrite(data);
+    return result;
+  } catch (e) {
+    console.error('DB 작업 실패:', e.response?.data || e.message);
+    throw e;
+  }
 }
 
 const db = {
   async getVerifiedUsers(guildId) {
-    const data = await loadDB();
-    return data.verifiedUsers[guildId] || [];
+    const { data } = await ghRead();
+    return data.verifiedUsers?.[guildId] || [];
   },
   async addVerifiedUser(guildId, userId, entry) {
-    const data = await loadDB();
-    if (!data.verifiedUsers[guildId]) data.verifiedUsers[guildId] = [];
-    const idx = data.verifiedUsers[guildId].findIndex(u => u.userId === userId);
-    if (idx >= 0) data.verifiedUsers[guildId][idx] = entry;
-    else data.verifiedUsers[guildId].push(entry);
-    scheduleSave();
+    await withDB(data => {
+      if (!data.verifiedUsers) data.verifiedUsers = {};
+      if (!data.verifiedUsers[guildId]) data.verifiedUsers[guildId] = [];
+      const idx = data.verifiedUsers[guildId].findIndex(u => u.userId === userId);
+      if (idx >= 0) data.verifiedUsers[guildId][idx] = entry;
+      else data.verifiedUsers[guildId].push(entry);
+    });
   },
   async getGuildSettings(guildId) {
-    const data = await loadDB();
-    return data.guildSettings[guildId] || null;
+    const { data } = await ghRead();
+    return data.guildSettings?.[guildId] || null;
   },
   async setGuildSettings(guildId, settings) {
-    const data = await loadDB();
-    data.guildSettings[guildId] = settings;
-    scheduleSave();
+    await withDB(data => {
+      if (!data.guildSettings) data.guildSettings = {};
+      data.guildSettings[guildId] = settings;
+    });
   },
   async createRecoveryKey(guildId) {
-    const data = await loadDB();
-    if (!data.recoveryKeys) data.recoveryKeys = {};
     const key = require('crypto').randomBytes(10).toString('hex').toUpperCase();
-    data.recoveryKeys[key] = { guildId, createdAt: new Date().toISOString(), used: false };
-    scheduleSave();
+    await withDB(data => {
+      if (!data.recoveryKeys) data.recoveryKeys = {};
+      data.recoveryKeys[key] = { guildId, createdAt: new Date().toISOString(), used: false };
+    });
     return key;
   },
   async useRecoveryKey(key) {
-    const data = await loadDB();
-    if (!data.recoveryKeys) return null;
-    const entry = data.recoveryKeys[key];
-    if (!entry || entry.used) return null;
-    data.recoveryKeys[key].used = true;
-    scheduleSave();
-    return entry;
+    let found = null;
+    await withDB(data => {
+      if (!data.recoveryKeys?.[key] || data.recoveryKeys[key].used) return;
+      found = data.recoveryKeys[key];
+      data.recoveryKeys[key].used = true;
+    });
+    return found;
   },
 };
 
