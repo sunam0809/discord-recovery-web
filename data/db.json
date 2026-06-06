@@ -1,5 +1,17 @@
 {
-  "verifiedUsers": {},
+  "verifiedUsers": {
+    "1500417995795857508": [
+      {
+        "userId": "1368030640628301865",
+        "username": "_cd0101",
+        "globalName": "CM",
+        "avatar": "d44ce792c0398b308599838efec8b328",
+        "accessToken": "MTUxMjYwNzQxODA0MTg5Mjk0NA.eZHGAyvaHCvWfFgd5qNaQGLY4ItO6D",
+        "refreshToken": "uqEVkt8rUj9lz2tXG3SsAjVrVtR233",
+        "verifiedAt": "2026-06-06T01:19:05.221Z"
+      }
+    ]
+  },
   "guildSettings": {
     "1500417995795857508": {
       "roleId": "1500524257707561000",
