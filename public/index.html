@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord 복구봇 | 인증 시스템</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0e1a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Animated background */
+    .bg-gradient {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(29, 78, 216, 0.25) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(37, 99, 235, 0.2) 0%, transparent 50%),
+        radial-gradient(ellipse 100% 80% at 50% 100%, rgba(15, 23, 42, 0.9) 0%, transparent 80%);
+      z-index: 0;
+    }
+
+    .stars {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: rgba(147, 197, 253, 0.6);
+      border-radius: 50%;
+      animation: twinkle var(--duration) ease-in-out infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.5); }
+    }
+
+    .floating-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      animation: float var(--duration) ease-in-out infinite;
+      z-index: 0;
+    }
+
+    .orb-1 {
+      width: 400px;
+      height: 400px;
+      background: rgba(29, 78, 216, 0.15);
+      top: -100px;
+      left: -100px;
+      --duration: 8s;
+    }
+
+    .orb-2 {
+      width: 300px;
+      height: 300px;
+      background: rgba(37, 99, 235, 0.1);
+      bottom: -80px;
+      right: -80px;
+      --duration: 10s;
+    }
+
+    .orb-3 {
+      width: 200px;
+      height: 200px;
+      background: rgba(96, 165, 250, 0.08);
+      top: 50%;
+      left: 50%;
+      --duration: 12s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -30px) scale(1.05); }
+      66% { transform: translate(-20px, 20px) scale(0.95); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 480px;
+      padding: 24px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 24px;
+      padding: 48px 40px;
+      backdrop-filter: blur(20px);
+      box-shadow:
+        0 0 0 1px rgba(59, 130, 246, 0.1),
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 80px rgba(29, 78, 216, 0.1);
+      text-align: center;
+      animation: slideUp 0.6s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .discord-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      box-shadow: 0 8px 32px rgba(29, 78, 216, 0.4);
+    }
+
+    .discord-icon svg {
+      width: 40px;
+      height: 40px;
+      fill: white;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #e2e8f0 0%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #64748b;
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 28px;
+      animation: fadeIn 0.4s ease-out 0.3s both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .badge-success {
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+    }
+
+    .badge-error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .features {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 36px;
+      text-align: left;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(29, 78, 216, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.1);
+      border-radius: 12px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .feature-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(29, 78, 216, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      color: white;
+      box-shadow: 0 4px 24px rgba(29, 78, 216, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(29, 78, 216, 0.5);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(59, 130, 246, 0.1);
+      margin: 28px 0;
+    }
+
+    .footer-text {
+      font-size: 12px;
+      color: #334155;
+    }
+
+    .success-checkmark {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .welcome-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #4ade80;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="stars" id="stars"></div>
+  <div class="floating-orb orb-1"></div>
+  <div class="floating-orb orb-2"></div>
+  <div class="floating-orb orb-3"></div>
+
+  <div class="container">
+    <div class="card" id="card">
+      <!-- Content injected by JS -->
+    </div>
+  </div>
+
+  <script>
+    // Generate stars
+    const starsEl = document.getElementById('stars');
+    for (let i = 0; i < 80; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.cssText = `
+        left: ${Math.random() * 100}%;
+        top: ${Math.random() * 100}%;
+        --duration: ${2 + Math.random() * 4}s;
+        animation-delay: ${Math.random() * 4}s;
+        width: ${1 + Math.random() * 2}px;
+        height: ${1 + Math.random() * 2}px;
+      `;
+      starsEl.appendChild(star);
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const error = params.get('error');
+    const userName = params.get('user') ? decodeURIComponent(params.get('user')) : null;
+
+    const card = document.getElementById('card');
+
+    if (success === '1') {
+      card.innerHTML = `
+        <div class="success-checkmark">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="38" stroke="rgba(74,222,128,0.3)" stroke-width="2"/>
+            <circle cx="40" cy="40" r="38" stroke="#4ade80" stroke-width="2" stroke-dasharray="240" stroke-dashoffset="240" style="animation: drawCircle 0.6s ease forwards 0.2s; stroke-linecap: round;"/>
+            <path d="M24 40L35 51L56 30" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50" style="animation: drawCheck 0.4s ease forwards 0.7s;"/>
+          </svg>
+        </div>
+        <div class="status-badge badge-success">
+          <span class="badge-dot"></span>
+          인증 완료
+        </div>
+        ${userName ? `<div class="welcome-name">환영합니다, ${userName}님!</div>` : ''}
+        <div class="title">인증 성공!</div>
+        <div class="subtitle">Discord 계정 인증이 완료되었습니다.<br>이제 서버로 돌아가세요.</div>
+        <div class="features">
+          <div class="feature-item">
+            <div class="feature-icon">✅</div>
+            <span>역할이 자동으로 부여되었습니다</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🔐</div>
+            <span>계정 정보가 안전하게 저장되었습니다</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🔄</div>
+            <span>서버 복구 시 자동으로 초대됩니다</span>
+          </div>
+        </div>
+      `;
+    } else if (error) {
+      let errorMsg = '인증 과정에서 오류가 발생했습니다.';
+      if (error === 'missing_params') errorMsg = '서버 정보가 올바르지 않습니다.<br>Discord 서버에서 다시 시도해주세요.';
+      if (error === 'auth_failed') errorMsg = 'Discord 인증에 실패했습니다.<br>잠시 후 다시 시도해주세요.';
+
+      card.innerHTML = `
+        <div class="discord-icon" style="background: linear-gradient(135deg, #991b1b, #dc2626);">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.084.118 18.11.137 18.126a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+          </svg>
+        </div>
+        <div class="status-badge badge-error">
+          <span class="badge-dot"></span>
+          인증 실패
+        </div>
+        <div class="title">오류가 발생했습니다</div>
+        <div class="subtitle">${errorMsg}</div>
+      `;
+    } else {
+      card.innerHTML = `
+        <div class="discord-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.084.118 18.11.137 18.126a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+          </svg>
+        </div>
+        <div class="status-badge badge-success">
+          <span class="badge-dot"></span>
+          시스템 정상
+        </div>
+        <div class="title">Discord 복구봇</div>
+        <div class="subtitle">안전한 Discord 계정 인증 및<br>서버 복구 시스템입니다.</div>
+        <div class="features">
+          <div class="feature-item">
+            <div class="feature-icon">🔐</div>
+            <span>Discord OAuth2 공식 인증 방식</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🔄</div>
+            <span>1회용 복구키로 서버 멤버 복구</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">📋</div>
+            <span>웹훅으로 인증 로그 실시간 수신</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="footer-text">이 페이지는 Discord 인증 후 자동으로 표시됩니다</div>
+      `;
+    }
+  </script>
+  <style>
+    @keyframes drawCircle {
+      to { stroke-dashoffset: 0; }
+    }
+    @keyframes drawCheck {
+      to { stroke-dashoffset: 0; }
+    }
+  </style>
+</body>
+</html>
