@@ -27,6 +27,15 @@
         "accessToken": "MTUxMjYwNzQxODA0MTg5Mjk0NA.vFtrz8gLbikTaQL73xrVrewa2hmxIO",
         "refreshToken": "wCPn5PA83FHo2yDNqtKVfLzCiMaZjr",
         "verifiedAt": "2026-06-07T04:50:11.509Z"
+      },
+      {
+        "userId": "880898774849966091",
+        "username": "sonodeu7655",
+        "globalName": "소노드",
+        "avatar": null,
+        "accessToken": "MTUxMjYwNzQxODA0MTg5Mjk0NA.p6CrSYsUM2iuiBI2TxebOqlOlrxK42",
+        "refreshToken": "9IIlEtezL9dIG58nA60SgJnrl2ugQv",
+        "verifiedAt": "2026-06-10T17:59:52.613Z"
       }
     ]
   },
